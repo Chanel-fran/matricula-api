@@ -1,28 +1,29 @@
-Feature: : Matricula de cursos
-  Como alumno de CIBERTEC
-  Quiero matricularme en mis cursos
-  Para llevarlos en el ciclo
+# language: es
+Característica: Matrícula del alumno
 
-  Scenario: Matricula valida con descuento por promedio y anulacion
-    Given  que Ana consulta la API de matricula
-    When se matricula con el codigo "i202610001" en el curso "PS3511"
-    Then el codigo de respuesta es 201
-    And el monto de la matricula es 288,0
-    And el estado de la matricula es "REGISTRADA"
-    When anula es matricula
-    Then el codigo de respuesta es 200
-    And el estado de la matricula es "ANULADA"
+  Antecedentes:
+    Dado que el alumno con codigo "i202610001" inicia sesion en la API
 
-  Scenario Outline: Matricula rechazada por <motivo>
-    Given  que Ana consulta la API de matricula
-    When se matricula por codigo "<alumno>" en el curso "<curso>"
-    Then el codigo de respuesta es <status>
-    And el codigo de error es "<codigo>"
-    Examples:
-      | motivo             | alumno     | curso  | status | codigo               |
-      | deuda              | i202610004 | PS5511 | 422    | ALUMNO_CON_DEUDA     |
-      | duplicada          | i202610003 | IA5513 | 409    | MATRICULA_DUPLICADA  |
-      | falta de vacantes  | i202610001 | IA5513 | 409    | SIN_VACANTES         |
-      | cruce de horario   | i202610002 | QA5517 | 409    | CRUCE_HORARIO        |
-      | límite de créditos | i202610005 | TS5514 | 422    | LIMITE_CREDITOS      |
-      | alumno inexistente | i999999999 | PS5511 | 404    | ALUMNO_NO_ENCONTRADO |
+  Escenario: Cotizar el curso
+    Cuando cotiza la matricula del alumno "i202610001" para el curso "QA5517"
+    Entonces el codigo de respuesta es 200
+    Y el monto total de la cotizacion es 288.0
+
+  Escenario: Matricularse y pagar
+    Cuando registra una matricula para el alumno "i202610001" en el curso "QA5517"
+    Entonces el codigo de respuesta es 201
+    Y el estado de la matricula es "REGISTRADA"
+    Y el monto de la matricula coincide con la cotizacion de 288.0
+    Y la respuesta cumple el esquema "matricula.json"
+    Cuando paga la matricula registrada con el metodo "TARJETA"
+    Entonces el codigo de respuesta es 200
+    Y el estado de la matricula es "PAGADA"
+    Y el campo "fechaPago" tiene valor
+    Y en el listado de pagos existe el pago de la matricula con metodo "TARJETA" y numero de operacion con formato "OP-000000"
+
+  Escenario: Regla de negocio que debe fallar
+    Dado que existe una matricula registrada y pagada para el alumno "i202610001" en el curso "QA5517"
+    Cuando intenta matricular al alumno "i202610001" en el curso "PS5511"
+    Entonces el codigo de respuesta es 409
+    Y el codigo de error es "CRUCE_HORARIO"
+    Y la respuesta cumple el esquema "error.json"
